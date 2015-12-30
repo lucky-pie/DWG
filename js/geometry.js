@@ -74,14 +74,11 @@ Point.prototype = {
  * @constructor
  */
 var Line = function(a, b, c) {
-    var k = G.P(a, b).length();
+    this.a = a; this.b = b; this.c = c;
+    // 初始化时自动归一化
+    var k = G.P(this.a, this.b).length();
     if(G.zr(k)) this.a = this.b = this.c = NaN;
-    else {
-        // 归一化
-        this.a = a / k;
-        this.b = b / k;
-        this.c = c / k;
-    }
+    else { this.a /= k; this.b /= k; this.c /= k; }
 };
 
 Line.prototype = {
@@ -90,15 +87,15 @@ Line.prototype = {
     vectorNormal: function() { return G.P(-this.a, -this.b); },  // 法向量（第一第四象限）
     distance: function(B) { return G.distance(this, B); },
 
-    parrallel: function(l) { return this.vectorNormal().parallel(l.vectorNormal()); },  // 判断直线平行
+    parallel: function(l) { return this.vectorNormal().parallel(l.vectorNormal()); },  // 判断直线平行
     perpendicular: function(l) { return this.vectorNormal().perpendicular(l.vectorNormal()); },  // 判断直线垂直
 
-    intersect: function(l) {
-        if(this.parrallel(l)) throw EvalError('平行线没有交点');
-        return G.P(
-            (a.b*b.c-b.b*a.c)/(b.b*a.a-a.b*b.a),
-            (a.a*b.c-b.a*a.c)/(b.a*a.b-a.a*b.b)
-        );
+    intersect: function(x) { return G.intersect(this, x); },
+
+    normalize: function() {  // 归一化
+        var k = G.P(this.a, this.b).length();
+        if(G.zr(k)) this.a = this.b = this.c = NaN;
+        else { this.a /= k; this.b /= k; this.c /= k; }
     },
 
     copy: function() { return G.L(this.a, this.b, this.c); },
@@ -144,19 +141,8 @@ var Circle = function(O, r) {
 };
 Circle.prototype = {
 
-    intersect: function(l) {
-        //debugger;
-        if(l instanceof Line) {
-            var d = l.distance(this.O);
-            if(G.gt(d, this.r)) return [];  // 相离
-            var M = this.O.pedal(l);
-            if(G.eq(d, this.r)) return [M];  // 相切
-            var w = Math.sqrt(this.r*this.r-d*d);
-            var v = M.getVectorFrom(this.O).perpendiculate().times(w);
-            return [M.add(v), M.minus(v)];
-        }
-        throw TypeError('只能计算圆和直线的交点');
-    },
+    cross: function(x) { return G.cross(this, x); },
+    intersect: function(x) { return G.intersect(this, x); },
 
     copy: function() { return C(this.a, this.b, this.c); },
     toString: function() { return 'G.L('+this.a+','+this.b+','+this.c+')'; }
@@ -207,12 +193,18 @@ var Geometry = {
      */
     L: function(a, b, c) { return new Line(a, b, c); },
 
+    /**
+     * 获得两个图形之间的距离
+     * @param A
+     * @param B
+     * @returns {*}
+     */
     distance: function(A, B) {
         // 点点距
         if(A instanceof Point && B instanceof Point) return A.minus(B).length();
         // 线线距
         if(A instanceof Line && B instanceof Line) {
-            if(A.parrallel(B)) return Math.abs(A.c-B.c)/G.P(A.a, A.b).length();
+            if(A.parallel(B)) return Math.abs(A.c-B.c)/G.P(A.a, A.b).length();
             return 0;
         }
         // 点线距
@@ -220,9 +212,61 @@ var Geometry = {
             if(A instanceof Line) return Math.abs(A.eval(B))/G.P(A.a, A.b).length();
             else return Math.abs(B.eval(A))/G.P(B.a, B.b).length();
         }
-        // TODO: 其他情况不予计算
-        throw TypeError('不支持计算'+A.toString()+'和'+B.toString()+'之间的距离');
+        throw EvalError('只支持计算点点距、点线距和线线距');
     },
+
+    /**
+     * 判断两个图形是否相交或相切
+     * @param A
+     * @param B
+     * @returns {boolean}
+     */
+    cross: function(A, B) {
+        if(A instanceof Circle && B instanceof Circle) {
+            return G.le(G.distance(A.O, B.O), A.r+B.r);
+        } else if(A instanceof Circle && B instanceof Line || A instanceof Line && B instanceof Circle) {
+            var l = A instanceof Line ? A : B;
+            var C = A instanceof Circle ? A : B;
+            return G.le(G.distance(l, C.O), C.r);
+        } else if(A instanceof Line && B instanceof Line) {
+            // TODO:
+        }
+        throw EvalError('只支持计算圆和直线或者圆和圆是否相交');
+    },
+
+    /**
+     * 获取两个图形之间的交点
+     * @param A
+     * @param B
+     */
+    intersect: function(A, B) {
+        if(A instanceof Circle && B instanceof Circle) {
+            var c1 = A, c2 = B;
+            var d = G.distance(c1.O, c2.O);
+            var t = ((c1.r*c1.r-c2.r*c2.r)/d/d+1)*0.5;
+            var O = c1.O.add(c2.O.minus(c1.O).times(t));
+            return G.intersect(c1, PP2L(O, O.add(c1.O.minus(c2.O).perpendiculate())));
+        } else if(A instanceof Circle && B instanceof Line || A instanceof Line && B instanceof Circle) {
+            var l = A instanceof Line ? A : B;
+            var C = A instanceof Circle ? A : B;
+            var d = l.distance(C.O);
+            if(G.gt(d, C.r)) return [];  // 相离
+            var M = C.O.pedal(l);
+            if(G.eq(d, C.r)) return [M];  // 相切
+            var w = Math.sqrt(C.r*C.r-d*d);
+            var v = M.getVectorFrom(C.O).perpendiculate().times(w);
+            return [M.add(v), M.minus(v)];
+        } else if(A instanceof Line && B instanceof Line) {
+            var a = A, b = B;
+            if(a.parallel(b)) throw EvalError('平行线没有交点');
+            return G.P(
+                (a.b*b.c-b.b*a.c)/(b.b*a.a-a.b*b.a),
+                (a.a*b.c-b.a*a.c)/(b.a*a.b-a.a*b.b)
+            );
+        }
+        throw EvalError('只支持计算圆和直线或者圆和圆是否相交');
+    },
+
 
     /**
      * 给出两个点以及半径，求经过 AB 的圆的圆心
