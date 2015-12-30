@@ -145,13 +145,17 @@ var Circle = function(O, r) {
 Circle.prototype = {
 
     intersect: function(l) {
-        var d = l.distance(this.O);
-        if(G.gt(d, this.r)) return [];  // 相离
-        var M = this.O.pedal(l);
-        if(G.eq(d, this.r)) return [M];  // 相切
-        var w = Math.sqrt(this.r*this.r-d*d);
-        var v = M.getVectorFrom(this.O).perpendiculate().times(w);
-        return [M.add(v), M.minus(v)];
+        //debugger;
+        if(l instanceof Line) {
+            var d = l.distance(this.O);
+            if(G.gt(d, this.r)) return [];  // 相离
+            var M = this.O.pedal(l);
+            if(G.eq(d, this.r)) return [M];  // 相切
+            var w = Math.sqrt(this.r*this.r-d*d);
+            var v = M.getVectorFrom(this.O).perpendiculate().times(w);
+            return [M.add(v), M.minus(v)];
+        }
+        throw TypeError('只能计算圆和直线的交点');
     },
 
     copy: function() { return C(this.a, this.b, this.c); },
