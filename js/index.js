@@ -2,7 +2,7 @@ $(function() {
 
     var $canvas = $('#canvas');
     var canvas = $canvas[0];
-    var context = canvas.getContext('2d');
+    var context = canvas.getContext('2d'); window.ctx = context;
     var $form = $('form');
 
     var item = { d1: 0, d2: 0, l1: 0, r1: 0, r2: 0, h: 0, n: 0 };

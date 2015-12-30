@@ -20,6 +20,37 @@ CanvasRenderingContext2D.prototype._arc = function(O, A, B, anticlockwise) {
 };
 
 /**
+ *
+ */
+CanvasRenderingContext2D.prototype.drawPPPSequencePlaneExpand = function(P, v, sides) {
+
+    this.beginPath();
+
+    if(sides.length < 3) throw EvalError('绘制三角形边边边序列平面展开图错误：参数不足，至少三条边');
+
+    var A = P, B = A.add(v.normalize().times(sides[0])), C;
+    var a, b, c;
+
+    this._moveTo(A);
+    this._lineTo(B);
+
+    for(var i = 2; i < sides.length; ++i) {
+        a = sides[i-1]; b = sides[i];
+        C = G.getTrianglePointByTwoPointAndSides(A, B, a, b);
+        console.log(C);
+        this._lineTo(C);
+        this._lineTo(A);
+        this._moveTo(C);
+        B = A;
+        A = C;
+    }
+
+    this.stroke();
+    this.closePath();
+
+};
+
+/**
  * 二维平面点类
  * @param x
  * @param y
@@ -192,6 +223,43 @@ var Geometry = {
      * @constructor
      */
     L: function(a, b, c) { return new Line(a, b, c); },
+
+    /**
+     * 根据三边边长判断是否能够构成三角形
+     * @param a
+     * @param b
+     * @param c
+     * @returns {boolean}
+     */
+    isTriangleValid: function(a, b, c) {
+        if(G.le(a, 0) || G.le(b, 0) || G.le(c, 0)) return false;
+        if(G.lt(a+b, c) || G.lt(a+c, b) || G.lt(b+c, a)) return false;
+        return true;
+    },
+
+    /**
+     * 断言三边边长能够构成三角形，如果不行抛错
+     * @param a
+     * @param b
+     * @param c
+     */
+    assertTriangle: function(a, b, c) {
+        if(!this.isTriangleValid(a, b, c)) throw EvalError('三角形验证失败，三边边长无法构成三角形。');
+    },
+
+    /**
+     * 给出三角形的两个顶点以及其对边边长，求取第三个点坐标
+     * @param A
+     * @param B
+     * @param a
+     * @param b
+     * @param anticlockwise
+     * @returns {*}
+     */
+    getTrianglePointByTwoPointAndSides: function(A, B, a, b, anticlockwise) {
+        G.assertTriangle(a, b, G.distance(A, B));
+        return G.intersect(G.C(A, a), G.C(B, b))[anticlockwise ? 1: 0];
+    },
 
     /**
      * 获得两个图形之间的距离
