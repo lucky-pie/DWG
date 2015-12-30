@@ -27,10 +27,10 @@ $(function() {
         context.strokeStyle = '#000000';
         context.lineWidth = 1;
 
-        var A = P(50.5, 50.5);
-        var B = A.add(P(item.d1/2+item.l1, 0));
-        var C = B.add(P(0, item.h));
-        var D = C.add(P(-item.d2/2, 0));
+        var A = G.P(50.5, 50.5);
+        var B = A.add(G.P(item.d1/2+item.l1, 0));
+        var C = B.add(G.P(0, item.h));
+        var D = C.add(G.P(-item.d2/2, 0));
         var O = G.getCircleCenterByTwoPointsAndRadius(A, D, item.r1);
 
         context.beginPath();
@@ -42,16 +42,16 @@ $(function() {
         context.stroke();
         context.closePath();
 
-        var A1 = A.add(P(0, item.h+item.d1/2+50));
-        var B1 = A1.add(P(item.d1/2+item.l1, 0));
+        var A1 = A.add(G.P(0, item.h+item.d1/2+50));
+        var B1 = A1.add(G.P(item.d1/2+item.l1, 0));
         var C1 = B1.copy();
-        var D1 = C1.add(P(-item.d2/2, 0));
-        var E1 = B1.add(P(0, -item.d1/2));
-        var F1 = B1.add(P(0, item.d1/2));
-        var G1 = E1.add(P(-item.l1, 0));
-        var H1 = F1.add(P(-item.l1, 0));
-        var I1 = B1.add(P(0, -item.d2/2));
-        var J1 = B1.add(P(0, item.d2/2));
+        var D1 = C1.add(G.P(-item.d2/2, 0));
+        var E1 = B1.add(G.P(0, -item.d1/2));
+        var F1 = B1.add(G.P(0, item.d1/2));
+        var G1 = E1.add(G.P(-item.l1, 0));
+        var H1 = F1.add(G.P(-item.l1, 0));
+        var I1 = B1.add(G.P(0, -item.d2/2));
+        var J1 = B1.add(G.P(0, item.d2/2));
 
         context.beginPath();
         context._moveTo(G1);
@@ -70,22 +70,22 @@ $(function() {
         context.stroke();
         context.closePath();
 
-        var A2 = A.add(P(item.d1+item.l1+50, 0));
-        var E2 = A2.add(P(-item.d1/2, 0));
-        var F2 = A2.add(P(item.d1/2, 0));
-        var D2 = A2.add(P(0, item.h));
-        var I2 = D2.add(P(-item.d2/2, 0));
-        var J2 = D2.add(P(item.d2/2, 0));
-        var _P = G.getCircleCenterByTwoPointsAndRadius(E2, I2, item.r2);
-        var _Q = G.getCircleCenterByTwoPointsAndRadius(J2, F2, item.r2);
+        var A2 = A.add(G.P(item.d1+item.l1+50, 0));
+        var E2 = A2.add(G.P(-item.d1/2, 0));
+        var F2 = A2.add(G.P(item.d1/2, 0));
+        var D2 = A2.add(G.P(0, item.h));
+        var I2 = D2.add(G.P(-item.d2/2, 0));
+        var J2 = D2.add(G.P(item.d2/2, 0));
+        var P = G.getCircleCenterByTwoPointsAndRadius(E2, I2, item.r2);
+        var Q = G.getCircleCenterByTwoPointsAndRadius(J2, F2, item.r2);
 
         context.setLineDash([]);
 
         context.beginPath();
         context._moveTo(E2);
-        context._arc(_P, E2, I2);
+        context._arc(P, E2, I2);
         context._lineTo(J2);
-        context._arc(_Q, J2, F2);
+        context._arc(Q, J2, F2);
         context._lineTo(E2);
         context.stroke();
         context.closePath();
