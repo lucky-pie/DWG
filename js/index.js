@@ -5,7 +5,7 @@ $(function() {
     var context = canvas.getContext('2d'); window.ctx = context;
     var $form = $('form');
 
-    var item = { d1: 0, d2: 0, l1: 0, r1: 0, r2: 0, h: 0, n: 0 };
+    var item = { d1: 0, d2: 0, l1: 0, r1: 0, r2: 0, h: 0, n: 0, k: 0 };
 
     canvas.width = 1200;
     canvas.height = 800;
@@ -116,6 +116,7 @@ $(function() {
         CP = G.C(P, item.r2);
         CQ = G.C(Q, item.r2);
         var colors = ['black', 'red', 'blue', 'green', 'gray', 'purple'];
+        var lr = [], ld = [];
         for(k = 1; k < item.n; ++k) {
 
             context.strokeStyle = colors[k];
@@ -145,6 +146,9 @@ $(function() {
             // 平视图直线段长度
             dd = ww - rr;
 
+            ld.push(dd);
+            lr.push(rr);
+
             // 侧视图绘制
             context.beginPath();
             context.setLineDash([3, 2]);
@@ -157,18 +161,12 @@ $(function() {
             _XA1 = W1.add(G.P(0, -rr));
             _XB1 = W1.add(G.P(0, rr));
 
-
             context.beginPath();
             context.setLineDash([3, 2]);
             context._moveTo(_XB1);
             context._arc(W1, _XB1, _XA1);
             context.stroke();
             context.closePath();
-
-
-
-
-
 
             _PP = X.add(G.P(-dd, 0));
 
@@ -199,6 +197,12 @@ $(function() {
 
         }
 
+        // 头尾两边尺寸需要补上
+        lr.unshift(item.d1/2);
+        ld.unshift(item.l1);
+        lr.push(item.d2/2);
+        ld.push(0);
+
         _XA1 = B1.add(G.P(0, -item.d2/2));
         _XB1 = B1.add(G.P(0, item.d2/2));
 
@@ -212,7 +216,6 @@ $(function() {
         context.stroke();
         context.closePath();
 
-
         // 平视图引导线最后一截
         context.beginPath();
         context.setLineDash([]);
@@ -221,9 +224,65 @@ $(function() {
         context.stroke();
         context.closePath();
 
+        var q2 = Math.sqrt(2)*20;
 
 
+        var sss = [20,20,20*Math.sqrt(2)];
 
+        for(var k = 0; k < 20; ++k) {
+            sss.push(20);
+            sss.push(20*Math.sqrt(3+k));
+        }
+
+        // 绘制剖分图
+        var i, j, st, ct, N, M, L, sides, d0, r0, d1, r1;
+        for(i = 1; i < lr.length; ++i) {
+            d0 = ld[i-1]; d1 = ld[i];
+            r0 = lr[i-1]; r1 = lr[i];
+            console.log(d0, r0);
+            console.log(d1, r1);
+            // 圆弧部分
+            if(i % 2) {
+                M = G.P(0, d0+r0, step);
+                N = G.P(0, d1+r1, 0);
+            } else {
+                M = G.P(0, d1+r1, 0);
+                N = G.P(0, d0+r0, step);
+            }
+            sides = [G.distance(M, N)];
+            for(j = 1; j <= item.k+1; ++j) {
+                st = Math.sin(Math.PI/2 * Math.min(1, j/item.k));
+                ct = Math.cos(Math.PI/2 * Math.min(1, j/item.k));
+                L = (i+j&1) ? G.P(r0*st, d0+r0*ct, step) : G.P(r1*st, d1+r1*ct, 0);
+                sides.push(G.distance(N, L));
+                sides.push(G.distance(M, L));
+                N = M;
+                M = L;
+            }
+            // 平板部分
+            if(i % 2) {
+                sides.push(d0);
+                sides.push(G.P(step, d1).length());
+                sides.push(d1);
+                sides.push(step);
+            } else {
+                sides.push(d1);
+                sides.push(G.P(step, d0).length());
+                sides.push(d0);
+                sides.push(step);
+            }
+            //console.log(sides);
+            //context.drawPPPSequencePlaneExpand(G.P(800,50+i*step*1.8+sides[0]), G.P(0,-1), sides);
+            // 执行绘图
+            if(i % 2) {
+                context.drawPPPSequencePlaneExpand(G.P(800,50+i*step*1.8), G.P(0,1), sides);
+                context.drawPPPSequencePlaneExpand(G.P(800,50+i*step*1.8), G.P(0,1), sides, true);
+            } else {
+                context.drawPPPSequencePlaneExpand(G.P(800,50+i*step*1.8+sides[0]), G.P(0,-1), sides);
+                context.drawPPPSequencePlaneExpand(G.P(800,50+i*step*1.8+sides[0]), G.P(0,-1), sides, true);
+            }
+        }
+        //context.drawPPPSequencePlaneExpand(G.P(600,500), G.P(0,1), sides, true);
 
     };
     canvasApp();

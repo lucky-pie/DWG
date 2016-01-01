@@ -22,25 +22,28 @@ CanvasRenderingContext2D.prototype._arc = function(O, A, B, anticlockwise) {
 /**
  *
  */
-CanvasRenderingContext2D.prototype.drawPPPSequencePlaneExpand = function(P, v, sides) {
+CanvasRenderingContext2D.prototype.drawPPPSequencePlaneExpand = function(P, v, sides, anticlockwise) {
 
     this.beginPath();
 
     if(sides.length < 3) throw EvalError('绘制三角形边边边序列平面展开图错误：参数不足，至少三条边');
+    if(sides.length % 2 !== 1) throw EvalError('绘制三角形边边边序列平面展开图错误：参数数量错误，边数必须为奇数');
 
     var A = P, B = A.add(v.normalize().times(sides[0])), C;
     var a, b, c;
 
-    this._moveTo(A);
-    this._lineTo(B);
+    this._moveTo(B);
+    //this._lineTo(B);
 
-    for(var i = 2; i < sides.length; ++i) {
+    for(var i = 2; i < sides.length; i+=2) {
         a = sides[i-1]; b = sides[i];
-        C = G.getTrianglePointByTwoPointAndSides(A, B, a, b);
-        console.log(C);
+        if(G.eq(a, 0)) C = B;
+        else if(G.eq(b, 0)) C = A;
+        else C = G.getTrianglePointByTwoPointAndSides(A, B, a, b, i%4==(anticlockwise?2:0));
         this._lineTo(C);
         this._lineTo(A);
-        this._moveTo(C);
+        //this._moveTo(C);
+        //console.log(C);
         B = A;
         A = C;
     }
@@ -54,29 +57,36 @@ CanvasRenderingContext2D.prototype.drawPPPSequencePlaneExpand = function(P, v, s
  * 二维平面点类
  * @param x
  * @param y
+ * @param z
  * @constructor
  */
-var Point = function(x, y) {
+var Point = function(x, y, z) {
     this.x = x || 0;
     this.y = y || 0;
+    this.z = z || 0;
 };
 
 Point.prototype = {
-    zero: function() { return G.zr(this.x) && G.zr(this.y); },
-    inverse: function() { return G.P(-this.x, -this.y); },
-    add: function(B) { return G.P(this.x+B.x, this.y+B.y); },
-    minus: function(B) { return G.P(this.x-B.x, this.y-B.y); },
-    times: function(k) { return G.P(k*this.x, k*this.y); },
-    divides: function(k) { return G.P(this.x/k, this.y/k); },
+
+    zero: function() { return G.zr(this.x) && G.zr(this.y) && G.zr(this.z); },
+    length: function() { return Math.sqrt(this.x*this.x+this.y*this.y+this.z*this.z); },
+    inverse: function() { return G.P(-this.x, -this.y, -this.z); },
+    add: function(B) { return G.P(this.x+B.x, this.y+B.y, this.z+B.z); },
+    minus: function(B) { return G.P(this.x-B.x, this.y-B.y, this.z-B.z); },
+    times: function(k) { return G.P(k*this.x, k*this.y, k*this.z); },
+    divides: function(k) { return G.P(this.x/k, this.y/k, this.z/k); },
     mid: function(B) { return this.times(0.5).add(B.times(0.5)); },
-    length: function() { return Math.sqrt(this.x*this.x+this.y*this.y); },
     normalize: function() { return this.divides(this.length() || 1); },
     getVectorTo: function(B) { return B.minus(this).normalize(); },
     getVectorFrom: function(B) { return B.getVectorTo(this); },
-    parallel: function(B) { return G.zr(A.cross(B)); },
+    parallel: function(B) { return G.zr(A.cross(B).length()); },
     perpendicular: function(B) { return G.zr(A.dot(B)); },  // 判断垂直
-    perpendiculate: function() { return G.P(-this.y, this.x); },  // 逆时针转九十度
+    perpendiculate: function() { return G.P(-this.y, this.x, this.z); },  // 绕z轴逆时针转九十度
     distance: function(B) { return G.distance(this, B); },
+    dot: function(B) { return this.x * B.x + this.y * B.y + this.z * B.z; },  // 内积
+    cross: function(B) { return G.P(this.y*B.z-this.z*B.y, this.z*B.x-this.x*B.z, this.x*B.y-this.y*B.x); },  // 叉积
+
+    // 二维运算
     angle: function() {
         var r = this.length();
         if(G.zr(r)) return NaN;
@@ -87,14 +97,16 @@ Point.prototype = {
     angleRadian: function() { return this.angle(); },  // 向量弧度，同 angle()
     angleDegree: function() { return this.angle()/Math.PI*180; },  // 向量角度
     rotate: function(angle) { /*TODO:*/ },  // 按角度旋转
-    dot: function(B) { return this.x * B.x + this.y * B.y; },  // 内积
-    cross: function(B) { return this.x * B.y - this.y * B.x; },  // 叉积
     bisector: function(B) { var M = this.mid(B); return PP2L(M, M.add(this.minus(B).perpendiculate()));  },  // 垂直平分线
     mirror: function(l) { return this.pedal(l).times(2).minus(this); },  // 镜像点
-    pedal: function(l) { var k = l.eval(this)/G.P(l.a,l.b).length(); return this.minus(G.P(l.a*k, l.b*k)); },  // 垂足
+    pedal: function(l) {
+        var k = l.eval(this)/G.P(l.a,l.b).length();
+        return this.minus(G.P(l.a*k, l.b*k));
+    },  // 垂足
 
-    copy: function() { return G.P(this.x, this.y); },
-    toString: function() { return 'G.P('+this.x+','+this.y+')'; }
+    // 函数
+    copy: function() { return G.P(this.x, this.y, this.z); },
+    toString: function() { return 'G.P('+this.x+','+this.y+','+this.z+')'; }
 };
 
 /**
@@ -114,8 +126,8 @@ var Line = function(a, b, c) {
 
 Line.prototype = {
     eval: function(P) { return this.a*P.x+this.b*P.y+this.c; },
-    vectorTangent: function() { return this.vectorTangent().perpendiculate(); },  // 切向量（第一第二象限）
-    vectorNormal: function() { return G.P(-this.a, -this.b); },  // 法向量（第一第四象限）
+    vectorTangent: function() { return this.vectorNormal().perpendiculate(); },  // 切向量（第一第二象限）
+    vectorNormal: function() { return G.P(this.a, this.b); },  // 法向量（第一第四象限）
     distance: function(B) { return G.distance(this, B); },
 
     parallel: function(l) { return this.vectorNormal().parallel(l.vectorNormal()); },  // 判断直线平行
@@ -175,8 +187,8 @@ Circle.prototype = {
     cross: function(x) { return G.cross(this, x); },
     intersect: function(x) { return G.intersect(this, x); },
 
-    copy: function() { return C(this.a, this.b, this.c); },
-    toString: function() { return 'G.L('+this.a+','+this.b+','+this.c+')'; }
+    copy: function() { return G.C(this.O.copy(), this.c); },
+    toString: function() { return 'G.C(G.P('+this.O.x+','+this.O.y+'),'+this.r+')'; }
 };
 
 /**
@@ -203,7 +215,7 @@ var Geometry = {
      * @returns {Point}: 构造出来的点对象
      * @constructor
      */
-    P: function(x, y) { return new Point(x||0, y||0); },
+    P: function(x, y, z) { return new Point(x||0, y||0, z||0); },
 
     /**
      * 圆构造函数
@@ -244,7 +256,9 @@ var Geometry = {
      * @param c
      */
     assertTriangle: function(a, b, c) {
-        if(!this.isTriangleValid(a, b, c)) throw EvalError('三角形验证失败，三边边长无法构成三角形。');
+        if(!this.isTriangleValid(a, b, c)) {
+            throw EvalError('三角形验证失败，三边边长无法构成三角形。');
+        }
     },
 
     /**
@@ -258,7 +272,10 @@ var Geometry = {
      */
     getTrianglePointByTwoPointAndSides: function(A, B, a, b, anticlockwise) {
         G.assertTriangle(a, b, G.distance(A, B));
-        return G.intersect(G.C(A, a), G.C(B, b))[anticlockwise ? 1: 0];
+        var pts = G.intersect(G.C(A, b), G.C(B, a));
+        var direction = B.minus(A).cross(pts[0].minus(A)).z < 0;
+        if(direction && anticlockwise || !direction && !anticlockwise) return pts[0];
+        return pts[1];
     },
 
     /**
@@ -309,20 +326,24 @@ var Geometry = {
      */
     intersect: function(A, B) {
         if(A instanceof Circle && B instanceof Circle) {
+            //console.log('intersect('+ A.toString()+','+ B.toString()+')');
             var c1 = A, c2 = B;
             var d = G.distance(c1.O, c2.O);
-            var t = ((c1.r*c1.r-c2.r*c2.r)/d/d+1)*0.5;
-            var O = c1.O.add(c2.O.minus(c1.O).times(t));
+            var t = (c1.r*c1.r-c2.r*c2.r+d*d)/d/2;
+            var O = c1.O.add(c1.O.getVectorTo(c2.O).times(t));
+            //console.log('--- '+d+' - '+t+' - '+ O.toString());
+            //console.log(PP2L(O, O.add(c1.O.minus(c2.O).perpendiculate())).toString());
             return G.intersect(c1, PP2L(O, O.add(c1.O.minus(c2.O).perpendiculate())));
         } else if(A instanceof Circle && B instanceof Line || A instanceof Line && B instanceof Circle) {
             var l = A instanceof Line ? A : B;
             var C = A instanceof Circle ? A : B;
-            var d = l.distance(C.O);
+            var d = G.distance(l, C.O);
             if(G.gt(d, C.r)) return [];  // 相离
             var M = C.O.pedal(l);
             if(G.eq(d, C.r)) return [M];  // 相切
             var w = Math.sqrt(C.r*C.r-d*d);
-            var v = M.getVectorFrom(C.O).perpendiculate().times(w);
+            var v = l.vectorTangent().times(w);
+            if(l.eval(M.add(v.perpendiculate())) * l.eval(C.O) < 0) v = v.inverse();
             return [M.add(v), M.minus(v)];
         } else if(A instanceof Line && B instanceof Line) {
             var a = A, b = B;
