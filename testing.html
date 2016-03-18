@@ -1,0 +1,29 @@
+ <!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Testing SVG</title>
+</head>
+<script src="js/d3.js" charset="utf-8"></script>
+<!-- 
+buy a official sticker at https://www.stickermule.com/user/1070696243/stickers for the d3 library if the codes start to be productive.
+//-->
+<body>
+
+<script>
+var d3svg = d3.select("body").append("svg")
+    .attr("width", 500)
+    .attr("height",250);
+var svg   = d3svg[0][0];
+var pt1   = {x:100,y:50}; 
+var pt2   = {x:200,y:80}; 
+d3svg.append("circle")
+    .attr("cx",pt1.x).attr("cy",pt1.y)
+    .attr("r",3).attr("fill","red");
+d3svg.append("circle")
+    .attr("cx",pt2.x).attr("cy",pt2.y)
+    .attr("r",3).attr("fill","red");
+</script>
+</body>
+
+</html> 
